@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Team Controller</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #111; color: #eee; }
+    #team { font-size: 1.2em; margin: 10px; }
+    .btn {
+      padding: 15px 25px;
+      margin: 5px;
+      font-size: 1.5em;
+      border-radius: 10px;
+      border: none;
+    }
+    #log {
+      height: 120px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      margin-top: 10px;
+      padding: 5px;
+      font-size: 0.9em;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <div id="team">Connecting...</div>
+  <div>
+    <button class="btn" data-cmd="up">⬆️</button><br>
+    <button class="btn" data-cmd="left">⬅️</button>
+    <button class="btn" data-cmd="right">➡️</button><br>
+    <button class="btn" data-cmd="down">⬇️</button>
+  </div>
+  <div id="log"></div>
+
+  <script>
+  const socket = io();
+
+  const teamDiv = document.getElementById('team');
+  const logDiv = document.getElementById('log');
+
+  socket.on('init', data => {
+    const team = data.teams[data.teamId];
+    teamDiv.textContent = `You are on team ${team.name}`;
+    teamDiv.style.color = team.color;
+  });
+
+  document.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cmd = btn.dataset.cmd;
+      socket.emit('command', cmd);
+      addLog(`You: ${cmd}`);
+    });
+  });
+
+  socket.on('command_echo', msg => {
+    addLog(`${msg.from.slice(0,4)}: ${msg.cmd}`);
+  });
+
+  socket.on('state', state => {
+    if (state.winner) {
+      addLog(`🏆 Team ${state.winner.toUpperCase()} reached the goal!`);
+    }
+  });
+
+  // NEW: handle rate limiting feedback
+  socket.on('rate_limited', data => {
+    const secs = Math.ceil(data.cooldownMs / 1000);
+    addLog(`⏳ Please wait ${secs}s before sending another command.`);
+  });
+
+  function addLog(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    logDiv.appendChild(div);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+</script>
+
+</body>
+</html>
