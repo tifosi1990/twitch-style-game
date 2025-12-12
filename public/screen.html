@@ -5,24 +5,95 @@
   <title>Game Screen</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    body { margin: 0; background: #111; }
-    canvas { display: block; margin: 0 auto; background: #222; }
+    body {
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #222;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      color: #fff;
+      font-size: 14px;
+    }
+    #counts div {
+      margin-bottom: 4px;
+    }
+    #startBtn {
+      margin-top: 8px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background: #555;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
+  <div id="hud">
+    <div id="counts"></div>
+    <button id="startBtn">Start Race</button>
+  </div>
+
   <canvas id="game" width="800" height="480"></canvas>
+
   <script>
     const socket = io();
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
+    const countsDiv = document.getElementById('counts');
+    const startBtn = document.getElementById('startBtn');
+
     let map = null;
     let teams = {};
     let winner = null;
+    let teamCounts = {};
+    let raceStarted = false;
+
+    startBtn.addEventListener('click', () => {
+      socket.emit('start_race');
+    });
+
+    function updateHud() {
+      // Team counters
+      countsDiv.innerHTML = '';
+      if (teams && teamCounts) {
+        Object.values(teams).forEach(team => {
+          const count = teamCounts[team.id] || 0;
+          const div = document.createElement('div');
+          div.textContent = `${team.name}: ${count} players`;
+          div.style.color = team.color;
+          countsDiv.appendChild(div);
+        });
+      }
+
+      // Button appearance
+      if (raceStarted) {
+        startBtn.textContent = 'Race Running';
+        startBtn.style.background = 'green';
+      } else {
+        startBtn.textContent = 'Start Race';
+        startBtn.style.background = '#555';
+      }
+    }
 
     socket.on('init', data => {
       map = data.map;
       teams = data.teams;
+      teamCounts = data.teamCounts || {};
+      raceStarted = !!data.raceStarted;
+      updateHud();
       draw();
     });
 
@@ -30,13 +101,35 @@
       map = state.map;
       teams = state.teams;
       winner = state.winner;
+      raceStarted = !!state.raceStarted;
+      if (state.teamCounts) {
+        teamCounts = state.teamCounts;
+      }
+      updateHud();
       draw();
     });
 
-    socket.on('reset', state => {
-      map = state.map;
-      teams = state.teams;
+    socket.on('race_started', data => {
+      teams = data.teams;
+      map = data.map;
+      raceStarted = !!data.raceStarted;
+      if (data.teamCounts) {
+        teamCounts = data.teamCounts;
+      }
       winner = null;
+      updateHud();
+      draw();
+    });
+
+    socket.on('reset', data => {
+      teams = data.teams;
+      map = data.map;
+      raceStarted = !!data.raceStarted;
+      if (data.teamCounts) {
+        teamCounts = data.teamCounts;
+      }
+      winner = null;
+      updateHud();
       draw();
     });
 
@@ -47,7 +140,7 @@
       const cellW = canvas.width / map.width;
       const cellH = canvas.height / map.height;
 
-      // background grid
+      // grid
       ctx.strokeStyle = '#444';
       for (let x = 0; x <= map.width; x++) {
         ctx.beginPath();
@@ -61,7 +154,8 @@
         ctx.lineTo(canvas.width, y * cellH);
         ctx.stroke();
       }
-            // walls
+
+      // walls
       if (map.walls) {
         ctx.fillStyle = '#555';
         map.walls.forEach(w => {
@@ -73,6 +167,7 @@
           );
         });
       }
+
       // hole (goal)
       ctx.fillStyle = '#2ecc71';
       ctx.beginPath();

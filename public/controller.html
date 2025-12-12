@@ -72,6 +72,13 @@
     addLog(`⏳ Please wait ${secs}s before sending another command.`);
   });
 
+
+  // NEW: race not started yet
+  socket.on('race_not_started', () => {
+    addLog('⚠️ Race has not started yet.');
+  });
+
+
   function addLog(text) {
     const div = document.createElement('div');
     div.textContent = text;

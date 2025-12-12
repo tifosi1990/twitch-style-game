@@ -8,10 +8,10 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-// ----- GAME CONFIG -----
+// ----- CONFIG -----
 const TEAM_IDS = ['red', 'blue'];
-const COMMAND_COOLDOWN_MS = 5000; // 5 seconds
-const TICK_MS = 300;              // how often cubes consume a command from queue
+const COMMAND_COOLDOWN_MS = 5000; // 1 command every 5 seconds
+const TICK_MS = 300;              // how often cubes consume commands
 
 // ----- GAME STATE -----
 const teams = {};
@@ -21,14 +21,18 @@ TEAM_IDS.forEach((id, idx) => {
     id,
     name: id.toUpperCase(),
     color: colors[idx] || '#ffffff',
-    cube: { x: 2 + idx * 2, y: 1 }, // starts at (2,1) and (4,1), both open in the maze
-    commandQueue: []                // queue of 'up' | 'down' | 'left' | 'right'
+    // starting positions inside maze corridor
+    cube: { x: 2 + idx * 2, y: 1 },
+    commandQueue: []
   };
 });
 
 // players[socketId] = { teamId, lastCommandTime }
 const players = {};
 
+let raceStarted = false;
+
+// ----- MAP & MAZE -----
 const MAP = {
   width: 20,
   height: 12,
@@ -41,7 +45,7 @@ function buildMaze() {
   const h = MAP.height;
   const walls = [];
 
-  // --- Outer border ---
+  // Outer border
   for (let x = 0; x < w; x++) {
     walls.push({ x, y: 0 });       // top
     walls.push({ x, y: h - 1 });   // bottom
@@ -51,9 +55,9 @@ function buildMaze() {
     walls.push({ x: w - 1, y });   // right
   }
 
-  // --- Interior "maze" rows (with gaps) ---
+  // Interior "maze" rows (each has two gaps)
 
-  // Row y = 3, walls everywhere except at x = 3 and x = 16
+  // Row y = 3, gaps at x = 3 and x = 16
   for (let x = 1; x < w - 1; x++) {
     if (x !== 3 && x !== 16) {
       walls.push({ x, y: 3 });
@@ -87,14 +91,14 @@ function buildMaze() {
 buildMaze();
 
 // ----- HELPERS -----
-
 function assignTeam() {
-  // Simple load balancing: choose team with fewest players
   const counts = {};
   TEAM_IDS.forEach(id => counts[id] = 0);
   Object.values(players).forEach(p => counts[p.teamId]++);
-  return TEAM_IDS.reduce((best, id) =>
-    counts[id] < counts[best] ? id : best, TEAM_IDS[0]);
+  return TEAM_IDS.reduce(
+    (best, id) => counts[id] < counts[best] ? id : best,
+    TEAM_IDS[0]
+  );
 }
 
 function isWall(x, y) {
@@ -118,12 +122,28 @@ function applyMove(cube, cmd) {
   newY = Math.max(0, Math.min(MAP.height - 1, newY));
 
   // block walls
-  if (isWall(newX, newY)) {
-    return; // ignore this move
-  }
+  if (isWall(newX, newY)) return;
 
   cube.x = newX;
   cube.y = newY;
+}
+
+function getTeamCounts() {
+  const counts = {};
+  TEAM_IDS.forEach(id => counts[id] = 0);
+  Object.values(players).forEach(p => {
+    if (counts[p.teamId] !== undefined) {
+      counts[p.teamId]++;
+    }
+  });
+  return counts;
+}
+
+function resetTeamsToStart() {
+  TEAM_IDS.forEach((id, idx) => {
+    teams[id].cube = { x: 2 + idx * 2, y: 1 };
+    teams[id].commandQueue = [];
+  });
 }
 
 // ----- SOCKET.IO -----
@@ -137,41 +157,59 @@ io.on('connection', socket => {
   };
   socket.join(teamId);
 
-  // Send initial state
+  // Initial state for this client
   socket.emit('init', {
     teamId,
     teams,
-    map: MAP
+    map: MAP,
+    raceStarted,
+    teamCounts: getTeamCounts()
   });
 
-  // Receive commands
+  // Player commands
   socket.on('command', cmd => {
     const player = players[socket.id];
     if (!player) return;
-
     if (!['up', 'down', 'left', 'right'].includes(cmd)) return;
+
+    // Ignore commands before race starts
+    if (!raceStarted) {
+      socket.emit('race_not_started');
+      return;
+    }
 
     const now = Date.now();
     const timeSinceLast = now - (player.lastCommandTime || 0);
 
-    // Cooldown: 1 command every 5 seconds
+    // Cooldown
     if (timeSinceLast < COMMAND_COOLDOWN_MS) {
       const remaining = COMMAND_COOLDOWN_MS - timeSinceLast;
-      socket.emit('rate_limited', {
-        cooldownMs: remaining
-      });
+      socket.emit('rate_limited', { cooldownMs: remaining });
       return;
     }
 
-    // Accept command
     player.lastCommandTime = now;
     teams[player.teamId].commandQueue.push(cmd);
 
-    // Optional echo to team as "chat"
     io.to(player.teamId).emit('command_echo', {
       from: socket.id,
       cmd
     });
+  });
+
+  // Start race (from screen button)
+  socket.on('start_race', () => {
+    if (!raceStarted) {
+      console.log('Race started by', socket.id);
+      raceStarted = true;
+      resetTeamsToStart();
+      io.emit('race_started', {
+        raceStarted,
+        teams,
+        map: MAP,
+        teamCounts: getTeamCounts()
+      });
+    }
   });
 
   socket.on('disconnect', () => {
@@ -181,11 +219,24 @@ io.on('connection', socket => {
 });
 
 // ----- GAME LOOP -----
-// Each TICK, each team's cube consumes exactly ONE command
 setInterval(() => {
-  // 1. For each team, pop next command in queue and move cube
+  const teamCounts = getTeamCounts();
+
+  // Before race: just broadcast state & counts (no movement)
+  if (!raceStarted) {
+    io.emit('state', {
+      teams,
+      map: MAP,
+      winner: null,
+      raceStarted,
+      teamCounts
+    });
+    return;
+  }
+
+  // 1. Move each cube by one queued command
   Object.values(teams).forEach(team => {
-    const cmd = team.commandQueue.shift(); // first-in, first-out
+    const cmd = team.commandQueue.shift();
     applyMove(team.cube, cmd);
   });
 
@@ -201,18 +252,24 @@ setInterval(() => {
   io.emit('state', {
     teams,
     map: MAP,
-    winner
+    winner,
+    raceStarted,
+    teamCounts
   });
 
-  // 4. If someone won, reset after a short delay
+  // 4. If winner, stop race & reset after delay
   if (winner) {
     console.log('Winner:', winner);
+    raceStarted = false;
+
     setTimeout(() => {
-      TEAM_IDS.forEach((id, idx) => {
-        teams[id].cube = { x: 2 + idx * 2, y: 2 };
-        teams[id].commandQueue = [];
+      resetTeamsToStart();
+      io.emit('reset', {
+        teams,
+        map: MAP,
+        raceStarted,
+        teamCounts: getTeamCounts()
       });
-      io.emit('reset', { teams, map: MAP });
     }, 3000);
   }
 }, TICK_MS);
