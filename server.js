@@ -10,8 +10,13 @@ app.use(express.static('public'));
 
 // ----- CONFIG -----
 const TEAM_IDS = ['red', 'blue'];
+<<<<<<< HEAD
 const COMMAND_COOLDOWN_MS = 5000; // 1 command every 5 seconds
 const TICK_MS = 300;              // how often cubes consume commands
+=======
+const COMMAND_COOLDOWN_MS = 1000; // 5 seconds
+const TICK_MS = 300;              // how often cubes consume a command from queue
+>>>>>>> d59d5a0f68986e6dbde326f6c1510ca8f294e87b
 
 // ----- GAME STATE -----
 const teams = {};
