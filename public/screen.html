@@ -43,6 +43,7 @@
   <div id="hud">
     <div id="counts"></div>
     <button id="startBtn">Start Race</button>
+    <button id="nextMapBtn">Next Map</button>
   </div>
 
   <canvas id="game" width="1280" height="720"></canvas>
@@ -54,6 +55,12 @@
 
     const countsDiv = document.getElementById('counts');
     const startBtn = document.getElementById('startBtn');
+    const nextMapBtn = document.getElementById('nextMapBtn');
+
+    nextMapBtn.addEventListener('click', () => {
+      socket.emit('next_map');
+    });
+
 
     let map = null;
     let teams = {};
@@ -106,6 +113,18 @@
         teamCounts = state.teamCounts;
       }
       updateHud();
+      draw();
+    });
+    
+    socket.on('map_changed', data => {
+      map = data.map;
+      teams = data.teams;
+      raceStarted = data.raceStarted;
+      teamCounts = data.teamCounts;
+      winner = null;
+
+      console.log('Map changed to:', data.mapName);
+
       draw();
     });
 
