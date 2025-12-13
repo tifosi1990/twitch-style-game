@@ -5,6 +5,9 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const fs = require('fs');
+const MAP = loadMapFromFile('maps/map1.txt')
+
 
 app.use(express.static('public'));
 
@@ -17,78 +20,55 @@ const TICK_MS = 300;              // how often cubes consume commands
 const teams = {};
 TEAM_IDS.forEach((id, idx) => {
   const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
+
+  if (!MAP.starts[id]) {
+    throw new Error(`Map is missing start position for team '${id.toUpperCase()}'`);
+  }
+
   teams[id] = {
     id,
     name: id.toUpperCase(),
     color: colors[idx] || '#ffffff',
-    // starting positions inside maze corridor
-    cube: { x: 2 + idx * 2, y: 1 },
+    cube: { ...MAP.starts[id] },   // ← START POSITION FROM MAP
     commandQueue: []
   };
 });
-
 // players[socketId] = { teamId, lastCommandTime }
 const players = {};
 
 let raceStarted = false;
 
 // ----- MAP & MAZE -----
-const MAP = {
-  width: 20,
-  height: 12,
-  hole: { x: 18, y: 10 }, // goal near bottom-right
-  walls: []
-};
+function loadMapFromFile(filename) {
+  const text = fs.readFileSync(filename, 'utf8');
+  const lines = text.split('\n').map(l => l.replace(/\r/g, ''));
 
-function buildMaze() {
-  const w = MAP.width;
-  const h = MAP.height;
+  const height = lines.length;
+  const width = lines[0].length;
+
   const walls = [];
+  const starts = {};
+  let hole = null;
 
-  // Outer border
-  for (let x = 0; x < w; x++) {
-    walls.push({ x, y: 0 });       // top
-    walls.push({ x, y: h - 1 });   // bottom
-  }
-  for (let y = 1; y < h - 1; y++) {
-    walls.push({ x: 0, y });       // left
-    walls.push({ x: w - 1, y });   // right
-  }
+  lines.forEach((line, y) => {
+    [...line].forEach((char, x) => {
+      if (char === '#') walls.push({ x, y });
+      if (char === 'R') starts.red = { x, y };
+      if (char === 'B') starts.blue = { x, y };
+      if (char === 'G') hole = { x, y };
+    });
+  });
 
-  // Interior "maze" rows (each has two gaps)
-
-  // Row y = 3, gaps at x = 3 and x = 16
-  for (let x = 1; x < w - 1; x++) {
-    if (x !== 3 && x !== 16) {
-      walls.push({ x, y: 3 });
-    }
-  }
-
-  // Row y = 5, gaps at x = 6 and x = 10
-  for (let x = 1; x < w - 1; x++) {
-    if (x !== 6 && x !== 10) {
-      walls.push({ x, y: 5 });
-    }
-  }
-
-  // Row y = 7, gaps at x = 2 and x = 13
-  for (let x = 1; x < w - 1; x++) {
-    if (x !== 2 && x !== 13) {
-      walls.push({ x, y: 7 });
-    }
-  }
-
-  // Row y = 9, gaps at x = 8 and x = 17
-  for (let x = 1; x < w - 1; x++) {
-    if (x !== 8 && x !== 17) {
-      walls.push({ x, y: 9 });
-    }
-  }
-
-  MAP.walls = walls;
+  return {
+    width,
+    height,
+    walls,
+    hole,
+    starts
+  };
 }
 
-buildMaze();
+
 
 // ----- HELPERS -----
 function assignTeam() {
@@ -140,8 +120,8 @@ function getTeamCounts() {
 }
 
 function resetTeamsToStart() {
-  TEAM_IDS.forEach((id, idx) => {
-    teams[id].cube = { x: 2 + idx * 2, y: 1 };
+  TEAM_IDS.forEach(id => {
+    teams[id].cube = { ...MAP.starts[id] };
     teams[id].commandQueue = [];
   });
 }
