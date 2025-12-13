@@ -65,6 +65,7 @@ function loadMapFromFile(filename) {
     width,
     height,
     walls,
+    ledges,
     hole,
     starts
   };
