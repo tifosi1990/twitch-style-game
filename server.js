@@ -6,15 +6,32 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 const fs = require('fs');
-const MAP = loadMapFromFile('maps/map2.txt')
-
-
-app.use(express.static('public'));
+const path = require('path')
 
 // ----- CONFIG -----
 const TEAM_IDS = ['red', 'blue'];
 const COMMAND_COOLDOWN_MS = 1000; // 1 command every 5 seconds
 const TICK_MS = 300;              // how often cubes consume commands
+
+
+const MAP_DIR = path.join(__dirname, 'maps');
+const MAP_FILES = fs.readdirSync(MAP_DIR)
+  .filter(f => f.endsWith('.txt'))
+  .sort();
+
+if (MAP_FILES.length === 0) {
+  throw new Error('No map files found in /maps folder');
+}
+
+
+
+let mapIndex = 0;
+let MAP = loadMapFromFile(path.join(MAP_DIR, MAP_FILES[mapIndex]));
+validateMap(MAP);
+
+app.use(express.static('public'));
+
+
 
 // ----- GAME STATE -----
 const teams = {};
@@ -37,6 +54,37 @@ TEAM_IDS.forEach((id, idx) => {
 const players = {};
 
 let raceStarted = false;
+
+function validateMap(map) {
+  TEAM_IDS.forEach(id => {
+    if (!map.starts[id]) {
+      throw new Error(`Map '${MAP_FILES[mapIndex]}' missing start for team '${id}'`);
+    }
+  });
+  if (!map.hole) {
+    throw new Error(`Map '${MAP_FILES[mapIndex]}' missing goal 'G'`);
+  }
+}
+
+function loadNextMap() {
+  mapIndex = (mapIndex + 1) % MAP_FILES.length;
+
+  MAP = loadMapFromFile(path.join(MAP_DIR, MAP_FILES[mapIndex]));
+  validateMap(MAP);
+
+  // stop race + reset to new start positions
+  raceStarted = false;
+  resetTeamsToStart();
+
+  // tell everyone the new map + reset teams
+  io.emit('map_changed', {
+    map: MAP,
+    teams,
+    raceStarted,
+    teamCounts: getTeamCounts(),
+    mapName: MAP_FILES[mapIndex]
+  });
+}
 
 // ----- MAP & MAZE -----
 function loadMapFromFile(filename) {
@@ -171,6 +219,7 @@ io.on('connection', socket => {
     teamId,
     teams,
     map: MAP,
+    mapName: MAP_FILES[mapIndex]
     raceStarted,
     teamCounts: getTeamCounts()
   });
@@ -219,6 +268,10 @@ io.on('connection', socket => {
         teamCounts: getTeamCounts()
       });
     }
+  });
+
+  socket.on('next_map', () => {
+  loadNextMap();
   });
 
   socket.on('disconnect', () => {
