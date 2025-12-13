@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 const fs = require('fs');
-const MAP = loadMapFromFile('maps/map1.txt')
+const MAP = loadMapFromFile('maps/map2.txt')
 
 
 app.use(express.static('public'));
