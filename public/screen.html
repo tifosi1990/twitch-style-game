@@ -27,23 +27,35 @@
     #counts div {
       margin-bottom: 4px;
     }
-    #startBtn {
-      margin-top: 8px;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      background: #555;
-      color: #fff;
-      cursor: pointer;
-      font-size: 14px;
+
+
+    .hudBtn {
+    display: block;        /* puts Next Map UNDER Start Race */
+    width: 140px;          /* same width for both */
+    margin-top: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
     }
+
+    #startBtn {
+      background: #555;      /* start button default */
+    }
+
+    #nextMapBtn {
+      background: #555;      /* keep the color (same as before) */
+    }
+    
   </style>
 </head>
 <body>
   <div id="hud">
     <div id="counts"></div>
-    <button id="startBtn">Start Race</button>
-    <button id="nextMapBtn">Next Map</button>
+    <button id="startBtn" class="hudBtn">Start Race</button>
+    <button id="nextMapBtn" class="hudBtn">Next Map</button>
   </div>
 
   <canvas id="game" width="1280" height="720"></canvas>
