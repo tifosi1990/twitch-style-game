@@ -219,7 +219,7 @@ io.on('connection', socket => {
     teamId,
     teams,
     map: MAP,
-    mapName: MAP_FILES[mapIndex]
+    mapName: MAP_FILES[mapIndex],
     raceStarted,
     teamCounts: getTeamCounts()
   });
