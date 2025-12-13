@@ -47,12 +47,14 @@ function loadMapFromFile(filename) {
   const width = lines[0].length;
 
   const walls = [];
+  const ledges = [];
   const starts = {};
   let hole = null;
 
   lines.forEach((line, y) => {
     [...line].forEach((char, x) => {
       if (char === '#') walls.push({ x, y });
+      if (char === 'V') ledges.push({ x, y });
       if (char === 'R') starts.red = { x, y };
       if (char === 'B') starts.blue = { x, y };
       if (char === 'G') hole = { x, y };
@@ -81,10 +83,18 @@ function assignTeam() {
   );
 }
 
+
+
 function isWall(x, y) {
   if (!MAP.walls) return false;
   return MAP.walls.some(w => w.x === x && w.y === y);
 }
+
+function isLedge(x, y) {
+  if (!MAP.ledges) return false;
+  return MAP.ledges.some(l => l.x === x && l.y === y);
+}
+
 
 function applyMove(cube, cmd) {
   if (!cmd) return;
@@ -103,6 +113,24 @@ function applyMove(cube, cmd) {
 
   // block walls
   if (isWall(newX, newY)) return;
+
+  if (isLedge(newX, newY)) {
+    // Only allow entering a ledge from above while moving down
+    if (cmd !== 'down') return;
+
+    // Jump over it: land one more cell down
+    const landingX = newX;
+    const landingY = Math.min(MAP.height - 1, newY + 1);
+
+    // landing must be valid (not wall, not ledge)
+    if (isWall(landingX, landingY)) return;
+    if (isLedge(landingX, landingY)) return;
+
+    cube.x = landingX;
+    cube.y = landingY;
+    return;
+  }
+
 
   cube.x = newX;
   cube.y = newY;

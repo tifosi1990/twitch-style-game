@@ -167,6 +167,19 @@
           );
         });
       }
+      
+      // ledges
+      if (map.ledges) {
+        ctx.fillStyle = '#b07d3c'; // brown-ish
+        map.ledges.forEach(l => {
+          ctx.fillRect(
+            l.x * cellW,
+            l.y * cellH,
+            cellW,
+            cellH
+          );
+        });
+      }
 
       // hole (goal)
       ctx.fillStyle = '#2ecc71';
