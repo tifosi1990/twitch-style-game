@@ -137,15 +137,14 @@
     socket.on('map_changed', data => {
       map = data.map;
       teams = data.teams;
-      boulders = data.boulders || [];
       raceStarted = data.raceStarted;
       teamCounts = data.teamCounts;
       winner = null;
 
-      console.log('Map changed to:', data.mapName);
-
+      updateHud();   // ✅ REQUIRED
       draw();
     });
+
 
     socket.on('race_started', data => {
       teams = data.teams;

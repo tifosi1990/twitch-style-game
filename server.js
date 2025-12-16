@@ -308,20 +308,28 @@ io.on('connection', socket => {
 
   // Start race (from screen button)
   socket.on('start_race', () => {
-    console.log('START RACE pressed')
-    if (!raceStarted) {
-      console.log('Race started by', socket.id);
-      raceStarted = true;
-      resetTeamsToStart();
-      io.emit('race_started', {
-        raceStarted,
-        teams,
-        boulders,
-        map: MAP,
-        teamCounts: getTeamCounts()
-      });
-    }
+    if (raceStarted) return;
+
+    console.log('Race started by', socket.id);
+
+    raceStarted = true;
+
+    // ✅ HARD RESET STATE
+    TEAM_IDS.forEach(id => {
+      teams[id].cube = { ...MAP.starts[id] };
+      teams[id].commandQueue = [];
+    });
+    boulders = MAP.boulders ? MAP.boulders.map(b => ({ ...b })) : [];
+
+    io.emit('race_started', {
+      raceStarted,
+      teams,
+      boulders,
+      map: MAP,
+      teamCounts: getTeamCounts()
+    });
   });
+
 
   socket.on('next_map', () => {
   loadNextMap();
