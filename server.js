@@ -157,16 +157,25 @@ function isBoulder(x, y) {
   return boulderIndexAt(x, y) !== -1;
 }
 
-function isCubeAt(x, y) {
-  return Object.values(teams).some(t => t.cube.x === x && t.cube.y === y);
+function isCubeAt(x, y, ignoreCube = null) {
+  return Object.values(teams).some(t => {
+    if (ignoreCube && t.cube === ignoreCube) return false;
+    return t.cube.x === x && t.cube.y === y;
+  });
 }
+
 
 function inBounds(x, y) {
   return x >= 0 && x < MAP.width && y >= 0 && y < MAP.height;
 }
 
 function applyMove(cube, cmd) {
-  if (!cmd) return;
+  console.log('applyMove START', cube.x, cube.y, cmd);
+
+  if (!cmd) {
+    console.log('RETURN: no cmd');
+    return;
+  }
 
   let dx = 0, dy = 0;
   if (cmd === 'up') dy = -1;
@@ -174,60 +183,110 @@ function applyMove(cube, cmd) {
   if (cmd === 'left') dx = -1;
   if (cmd === 'right') dx = 1;
 
-  if (dx === 0 && dy === 0) return;
+  if (dx === 0 && dy === 0) {
+    console.log('RETURN: dx dy zero');
+    return;
+  }
 
   const newX = cube.x + dx;
   const newY = cube.y + dy;
 
-  if (!inBounds(newX, newY)) return;
-  if (isWall(newX, newY)) return;
+  console.log('TARGET', newX, newY);
 
-  // ledge behaviour still applies (your existing code)
-  if (isLedge(newX, newY)) {
-    if (cmd !== 'down') return;
-
-    const landingX = newX;
-    const landingY = newY + 1;
-
-    if (!inBounds(landingX, landingY)) return;
-    if (isWall(landingX, landingY)) return;
-    if (isLedge(landingX, landingY)) return;
-    if (isBoulder(landingX, landingY)) return;   // ✅ block landing on boulder
-    if (isCubeAt(landingX, landingY)) return;
-
-    cube.x = landingX;
-    cube.y = landingY;
+  if (!inBounds(newX, newY)) {
+    console.log('RETURN: out of bounds');
     return;
   }
 
-  // ✅ BOULDER PUSH LOGIC
   const bi = boulderIndexAt(newX, newY);
   if (bi !== -1) {
+    console.log('HIT BOULDER');
+
     const pushX = newX + dx;
     const pushY = newY + dy;
 
-    // Only push if space beyond is free
-    if (!inBounds(pushX, pushY)) return;
-    if (isWall(pushX, pushY)) return;
-    if (isLedge(pushX, pushY)) return;
-    if (isBoulder(pushX, pushY)) return;
-    if (isCubeAt(pushX, pushY)) return;
-    if (pushX === MAP.hole.x && pushY === MAP.hole.y) return; // optional: don't push into goal
+    if (!inBounds(pushX, pushY)) {
+      console.log('RETURN: boulder push OOB');
+      return;
+    }
+    if (isWall(pushX, pushY)) {
+      console.log('RETURN: boulder push wall');
+      return;
+    }
+    if (isLedge(pushX, pushY)) {
+      console.log('RETURN: boulder push ledge');
+      return;
+    }
+    if (isBoulder(pushX, pushY)) {
+      console.log('RETURN: boulder push boulder');
+      return;
+    }
+    if (isCubeAt(pushX, pushY, cube)) {
+      console.log('RETURN: boulder push cube');
+      return;
+    }
 
-    // push boulder
+    console.log('PUSH BOULDER');
     boulders[bi] = { x: pushX, y: pushY };
-
-    // move cube into boulder's old spot
     cube.x = newX;
     cube.y = newY;
     return;
   }
 
-  // Normal move
-  if (isCubeAt(newX, newY)) return; // optional: prevent cubes overlapping
+  if (isWall(newX, newY)) {
+    console.log('RETURN: wall');
+    return;
+  }
+
+  if (isLedge(newX, newY)) {
+    console.log('HIT LEDGE');
+
+    if (cmd !== 'down') {
+      console.log('RETURN: ledge wrong direction');
+      return;
+    }
+
+    const landingX = newX;
+    const landingY = newY + 1;
+
+    if (!inBounds(landingX, landingY)) {
+      console.log('RETURN: ledge OOB');
+      return;
+    }
+    if (isWall(landingX, landingY)) {
+      console.log('RETURN: ledge wall');
+      return;
+    }
+    if (isLedge(landingX, landingY)) {
+      console.log('RETURN: ledge onto ledge');
+      return;
+    }
+    if (isBoulder(landingX, landingY)) {
+      console.log('RETURN: ledge onto boulder');
+      return;
+    }
+    if (isCubeAt(landingX, landingY, cube)) {
+      console.log('RETURN: ledge onto cube');
+      return;
+    }
+
+    console.log('LEDGE JUMP');
+    cube.x = landingX;
+    cube.y = landingY;
+    return;
+  }
+
+  if (isCubeAt(newX, newY, cube)) {
+    console.log('RETURN: cube collision');
+    return;
+  }
+
+  console.log('NORMAL MOVE');
   cube.x = newX;
   cube.y = newY;
 }
+
+
 
 
 function getTeamCounts() {

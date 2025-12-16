@@ -80,7 +80,7 @@
     let map = null;
     let teams = {};
     let winner = null;
-    let boulders = []
+    let boulders = [];
     let teamCounts = {};
     let raceStarted = false;
 
@@ -124,15 +124,15 @@
     socket.on('state', state => {
       map = state.map;
       teams = state.teams;
-      boulders = data.boulders || [];
+      boulders = state.boulders || [];
       winner = state.winner;
       raceStarted = !!state.raceStarted;
-      if (state.teamCounts) {
-        teamCounts = state.teamCounts;
-      }
+      teamCounts = state.teamCounts || teamCounts;
+
       updateHud();
       draw();
     });
+
     
     socket.on('map_changed', data => {
       map = data.map;
