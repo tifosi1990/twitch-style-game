@@ -80,6 +80,7 @@
     let map = null;
     let teams = {};
     let winner = null;
+    let boulders = []
     let teamCounts = {};
     let raceStarted = false;
 
@@ -113,6 +114,7 @@
     socket.on('init', data => {
       map = data.map;
       teams = data.teams;
+      boulders = data.boulders || [];
       teamCounts = data.teamCounts || {};
       raceStarted = !!data.raceStarted;
       updateHud();
@@ -122,6 +124,7 @@
     socket.on('state', state => {
       map = state.map;
       teams = state.teams;
+      boulders = data.boulders || [];
       winner = state.winner;
       raceStarted = !!state.raceStarted;
       if (state.teamCounts) {
@@ -134,6 +137,7 @@
     socket.on('map_changed', data => {
       map = data.map;
       teams = data.teams;
+      boulders = data.boulders || [];
       raceStarted = data.raceStarted;
       teamCounts = data.teamCounts;
       winner = null;
@@ -146,6 +150,7 @@
     socket.on('race_started', data => {
       teams = data.teams;
       map = data.map;
+      boulders = data.boulders || [];
       raceStarted = !!data.raceStarted;
       if (data.teamCounts) {
         teamCounts = data.teamCounts;
@@ -158,6 +163,7 @@
     socket.on('reset', data => {
       teams = data.teams;
       map = data.map;
+      boulders = data.boulders || [];
       raceStarted = !!data.raceStarted;
       if (data.teamCounts) {
         teamCounts = data.teamCounts;
@@ -202,6 +208,22 @@
         });
       }
       
+      // boulders
+      if (boulders && boulders.length) {
+        ctx.fillStyle = '#8b6a4f';
+        boulders.forEach(b => {
+          ctx.fillRect(
+            b.x * cellW + cellW * 0.15,
+            b.y * cellH + cellH * 0.15,
+            cellW * 0.7,
+            cellH * 0.7
+          );
+        });
+      }
+
+
+
+
       // ledges
       if (map.ledges) {
         ctx.fillStyle = '#CCCCCC'; // brown-ish

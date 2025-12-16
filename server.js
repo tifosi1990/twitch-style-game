@@ -97,6 +97,7 @@ function loadMapFromFile(filename) {
   const walls = [];
   const ledges = [];
   const starts = {};
+  const boulders = [];
   let hole = null;
 
   lines.forEach((line, y) => {
@@ -105,6 +106,7 @@ function loadMapFromFile(filename) {
       if (char === 'V') ledges.push({ x, y });
       if (char === 'R') starts.red = { x, y };
       if (char === 'B') starts.blue = { x, y };
+      if (char === 'O') boulders.push({ x, y });
       if (char === 'G') hole = { x, y };
     });
   });
@@ -115,10 +117,12 @@ function loadMapFromFile(filename) {
     walls,
     ledges,
     hole,
+    boulders,
     starts
   };
 }
 
+let boulders = MAP.boulders ? MAP.boulders.map(b => ({ ...b })) : [];
 
 
 // ----- HELPERS -----
@@ -145,45 +149,84 @@ function isLedge(x, y) {
 }
 
 
+function boulderIndexAt(x, y) {
+  return boulders.findIndex(b => b.x === x && b.y === y);
+}
+
+function isBoulder(x, y) {
+  return boulderIndexAt(x, y) !== -1;
+}
+
+function isCubeAt(x, y) {
+  return Object.values(teams).some(t => t.cube.x === x && t.cube.y === y);
+}
+
+function inBounds(x, y) {
+  return x >= 0 && x < MAP.width && y >= 0 && y < MAP.height;
+}
+
 function applyMove(cube, cmd) {
   if (!cmd) return;
 
-  let newX = cube.x;
-  let newY = cube.y;
+  let dx = 0, dy = 0;
+  if (cmd === 'up') dy = -1;
+  if (cmd === 'down') dy = 1;
+  if (cmd === 'left') dx = -1;
+  if (cmd === 'right') dx = 1;
 
-  if (cmd === 'up') newY -= 1;
-  if (cmd === 'down') newY += 1;
-  if (cmd === 'left') newX -= 1;
-  if (cmd === 'right') newX += 1;
+  const newX = cube.x + dx;
+  const newY = cube.y + dy;
 
-  // clamp to bounds
-  newX = Math.max(0, Math.min(MAP.width - 1, newX));
-  newY = Math.max(0, Math.min(MAP.height - 1, newY));
-
-  // block walls
+  if (!inBounds(newX, newY)) return;
   if (isWall(newX, newY)) return;
 
+  // ledge behaviour still applies (your existing code)
   if (isLedge(newX, newY)) {
-    // Only allow entering a ledge from above while moving down
     if (cmd !== 'down') return;
 
-    // Jump over it: land one more cell down
     const landingX = newX;
-    const landingY = Math.min(MAP.height - 1, newY + 1);
+    const landingY = newY + 1;
 
-    // landing must be valid (not wall, not ledge)
+    if (!inBounds(landingX, landingY)) return;
     if (isWall(landingX, landingY)) return;
     if (isLedge(landingX, landingY)) return;
+    if (isBoulder(landingX, landingY)) return;   // ✅ block landing on boulder
+    if (isCubeAt(landingX, landingY)) return;
 
     cube.x = landingX;
     cube.y = landingY;
     return;
   }
 
+  // ✅ BOULDER PUSH LOGIC
+  const bi = boulderIndexAt(newX, newY);
+  if (bi !== -1) {
+    const pushX = newX + dx;
+    const pushY = newY + dy;
 
+    // Only push if space beyond is free
+    if (!inBounds(pushX, pushY)) return;
+    if (isWall(pushX, pushY)) return;
+    if (isLedge(pushX, pushY)) return;
+    if (isBoulder(pushX, pushY)) return;
+    if (isCubeAt(pushX, pushY)) return;
+    if (pushX === MAP.hole.x && pushY === MAP.hole.y) return; // optional: don't push into goal
+
+    // push boulder
+    boulders[bi] = { x: pushX, y: pushY };
+
+    // move cube into boulder's old spot
+    cube.x = newX;
+    cube.y = newY;
+    return;
+  }
+
+  // Normal move
+  if (isCubeAt(newX, newY)) return; // optional: prevent cubes overlapping
   cube.x = newX;
   cube.y = newY;
 }
+
 
 function getTeamCounts() {
   const counts = {};
@@ -201,6 +244,9 @@ function resetTeamsToStart() {
     teams[id].cube = { ...MAP.starts[id] };
     teams[id].commandQueue = [];
   });
+  //reset boulders to start
+  boulders = MAP.boulders ? MAP.boulders.map(b => ({ ...b })) : [];
+
 }
 
 // ----- SOCKET.IO -----
@@ -264,6 +310,7 @@ io.on('connection', socket => {
       io.emit('race_started', {
         raceStarted,
         teams,
+        boulders,
         map: MAP,
         teamCounts: getTeamCounts()
       });
