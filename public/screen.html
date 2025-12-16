@@ -8,48 +8,50 @@
     body {
       margin: 0;
       background: #111;
-      overflow: hidden;
       font-family: sans-serif;
     }
-    canvas {
-      display: block;
-      margin: 0 auto;
-      background: #222;
+
+    /* NEW: two-column layout */
+    #layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px;
     }
+
+    /* HUD is now a normal left column (no absolute positioning) */
     #hud {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
+      width: 120px;              /* controls sidebar width */
       color: #fff;
       font-size: 14px;
     }
+
     #counts div {
       margin-bottom: 4px;
     }
 
-
     .hudBtn {
-    display: block;        /* puts Next Map UNDER Start Race */
-    width: 70px;          /* same width for both */
-    margin-top: 8px;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px 0;
+
+      border: none;
+      border-radius: 4px;
+      background: #555;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
     }
 
-    #startBtn {
-      background: #555;      /* start button default */
+    /* Canvas sits in the right column */
+    canvas {
+      display: block;
+      background: #222;
+      border-radius: 6px;
     }
-
-    #nextMapBtn {
-      background: #555;      /* keep the color (same as before) */
-    }
-    
   </style>
+
 </head>
 <body>
   <div id="hud">
