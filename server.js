@@ -264,6 +264,7 @@ io.on('connection', socket => {
   socket.emit('init', {
     teamId,
     teams,
+    boulders,
     map: MAP,
     mapName: MAP_FILES[mapIndex],
     raceStarted,
@@ -336,6 +337,7 @@ setInterval(() => {
     io.emit('state', {
       teams,
       map: MAP,
+      boulders,
       winner: null,
       raceStarted,
       teamCounts
@@ -362,6 +364,7 @@ setInterval(() => {
     teams,
     map: MAP,
     winner,
+    boulders,
     raceStarted,
     teamCounts
   });
@@ -376,6 +379,7 @@ setInterval(() => {
       io.emit('reset', {
         teams,
         map: MAP,
+        boulders,
         raceStarted,
         teamCounts: getTeamCounts()
       });
