@@ -174,6 +174,8 @@ function applyMove(cube, cmd) {
   if (cmd === 'left') dx = -1;
   if (cmd === 'right') dx = 1;
 
+  if (dx === 0 && dy === 0) return;
+
   const newX = cube.x + dx;
   const newY = cube.y + dy;
 
@@ -273,6 +275,7 @@ io.on('connection', socket => {
 
   // Player commands
   socket.on('command', cmd => {
+    console.log('CMD from', socket.id, cmd);
     const player = players[socket.id];
     if (!player) return;
     if (!['up', 'down', 'left', 'right'].includes(cmd)) return;
