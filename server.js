@@ -275,6 +275,7 @@ io.on('connection', socket => {
 
   // Player commands
   socket.on('command', cmd => {
+    console.log('COMMAND RECEIVED:', cmd);
     console.log('CMD from', socket.id, cmd);
     const player = players[socket.id];
     if (!player) return;
@@ -307,6 +308,7 @@ io.on('connection', socket => {
 
   // Start race (from screen button)
   socket.on('start_race', () => {
+    console.log('START RACE pressed')
     if (!raceStarted) {
       console.log('Race started by', socket.id);
       raceStarted = true;
@@ -351,6 +353,9 @@ setInterval(() => {
   // 1. Move each cube by one queued command
   Object.values(teams).forEach(team => {
     const cmd = team.commandQueue.shift();
+    if (cmd) {
+    console.log('APPLY MOVE:', team.id, cmd);
+  }
     applyMove(team.cube, cmd);
   });
 
