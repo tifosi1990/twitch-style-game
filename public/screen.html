@@ -26,35 +26,7 @@
       color: #fff;
       font-size: 14px;
     }
-    
-    #qrModal{
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.65);
-      z-index: 9999;
-      display: none;
-    }
 
-    #qrBox{
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #111;
-      border: 1px solid #333;
-      border-radius: 8px;
-      padding: 12px;
-      width: 280px;
-    }
-
-    #qrClose{
-      background:#333;
-      color:#fff;
-      border:none;
-      border-radius:4px;
-      padding: 6px 10px;
-      cursor:pointer;
-    }
 
     #counts div {
       margin-bottom: 4px;
@@ -114,18 +86,6 @@
     let raceStarted = false;
     
     <button id="qrBtn" class="hudBtn">QR</button>
-
-    <div id="qrModal" style="display:none;">
-      <div id="qrBox">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="color:#fff;">Scan to join</div>
-          <button id="qrClose">✕</button>
-        </div>
-        <div id="qrCode" style="margin-top:10px;"></div>
-        <div id="qrText" style="color:#ddd; font-size:12px; margin-top:8px; word-break:break-all;"></div>
-      </div>
-    </div>
-
 
 
     startBtn.addEventListener('click', () => {
