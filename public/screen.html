@@ -194,6 +194,13 @@
         ctx.lineTo(canvas.width, y * cellH);
         ctx.stroke();
       }
+      // ice
+      if (map.ice) {
+        ctx.fillStyle = '#4aa3ff'; // light blue
+        map.ice.forEach(t => {
+          ctx.fillRect(t.x * cellW, t.y * cellH, cellW, cellH);
+        });
+      }
 
       // walls
       if (map.walls) {

@@ -94,6 +94,7 @@ function loadMapFromFile(filename) {
   const height = lines.length;
   const width = lines[0].length;
 
+  const ice = [];
   const walls = [];
   const ledges = [];
   const starts = {};
@@ -108,6 +109,7 @@ function loadMapFromFile(filename) {
       if (char === 'B') starts.blue = { x, y };
       if (char === 'O') boulders.push({ x, y });
       if (char === 'G') hole = { x, y };
+      if (char === 'I') ice.push({ x, y });
     });
   });
 
@@ -118,6 +120,7 @@ function loadMapFromFile(filename) {
     ledges,
     hole,
     boulders,
+    ice,
     starts
   };
 }
@@ -156,6 +159,47 @@ function boulderIndexAt(x, y) {
 function isBoulder(x, y) {
   return boulderIndexAt(x, y) !== -1;
 }
+
+
+function isIce(x, y) {
+  if (!MAP.ice) return false;
+  return MAP.ice.some(t => t.x === x && t.y === y);
+}
+
+
+function blocksSlide(x, y, movingCube) {
+  if (!inBounds(x, y)) return true;
+  if (isWall(x, y)) return true;
+  if (isLedge(x, y)) return true;     // ledge is an obstacle for sliding
+  if (isBoulder(x, y)) return true;   // boulder is an obstacle for sliding
+  if (isCubeAt(x, y, movingCube)) return true; // optional but recommended
+  return false;
+}
+
+function slideIfOnIce(cube, dx, dy) {
+  // Only slide if you are currently on ice
+  if (!isIce(cube.x, cube.y)) return;
+
+  // Slide until next step would be blocked.
+  while (isIce(cube.x, cube.y)) {
+    const nx = cube.x + dx;
+    const ny = cube.y + dy;
+
+    // stop before obstacle
+    if (blocksSlide(nx, ny, cube)) return;
+
+    // next tile is free:
+    // - if it's ice, keep going
+    // - if it's not ice, step onto it and stop (classic “slide off”)
+    cube.x = nx;
+    cube.y = ny;
+
+    if (!isIce(cube.x, cube.y)) return;
+  }
+}
+
+
+
 
 function isCubeAt(x, y, ignoreCube = null) {
   return Object.values(teams).some(t => {
@@ -230,6 +274,7 @@ function applyMove(cube, cmd) {
     boulders[bi] = { x: pushX, y: pushY };
     cube.x = newX;
     cube.y = newY;
+    slideIfOnIce(cube, dx, dy);
     return;
   }
 
@@ -273,6 +318,7 @@ function applyMove(cube, cmd) {
     console.log('LEDGE JUMP');
     cube.x = landingX;
     cube.y = landingY;
+    slideIfOnIce(cube, 0, 1); 
     return;
   }
 
@@ -284,6 +330,8 @@ function applyMove(cube, cmd) {
   console.log('NORMAL MOVE');
   cube.x = newX;
   cube.y = newY;
+  slideIfOnIce(cube, dx, dy); 
+  return;
 }
 
 
