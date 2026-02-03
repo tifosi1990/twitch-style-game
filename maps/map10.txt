@@ -7,7 +7,7 @@
 # #                    #
 # # VVVVVVVVVVVVV ## ###
 #   IIIIIIIIIIIIII#   ##
-#OO#IIIIII#IIIIII #OOO##
+#VV#IIVIII#IIIIII #OOO##
 #  #IIIIIIIIIIIII #   ##
 #                ##   B#    
 ########################
