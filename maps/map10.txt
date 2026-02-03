@@ -1,0 +1,13 @@
+########################
+#   IIIIIII#IIII#G#   R#
+# ##IIIIIII#IIIIII#   ##
+# #IIIIIIIIIII#III#OOO##
+# #IIIIIIII#IIIIII#   ##
+# ################## ###
+# #                    #
+# # VVVVVVVVVVVVV ## ###
+#   IIIIIIIIIIIIII#   ##
+#OO#IIIIII#IIIIII #OOO##
+#  #IIIIIIIIIIIII #   ##
+#                ##   B#    
+########################
