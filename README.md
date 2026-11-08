@@ -25,6 +25,13 @@ Dependencies are:
 
 ## Run
 
+The easy way: double-click **`Start Game.bat`** in this folder. It installs the dependencies the first
+time, starts the server and opens the game screen in Chrome (or your default browser). Keep the black
+server window open while playing; close it to stop the game. For a desktop shortcut, right-click
+`Start Game.bat` and choose *Show more options > Send to > Desktop (create shortcut)*.
+
+From a terminal instead:
+
 ```bash
 npm start
 ```
@@ -47,6 +54,19 @@ This page shows the maze, player counts, and the admin buttons:
 
 - `Start Race`
 - `Next Map`
+
+## Players Join With The QR Code
+
+The game screen shows a **Scan to join** QR code next to the map, with the address printed underneath.
+Players scan it with their phone camera to open the controller. The server works out this computer's
+Wi-Fi/Ethernet address by itself and also prints it in the server window (`Players join: ...`).
+
+If the QR code points at the wrong address (this can happen with VPNs or virtual network adapters),
+set it by hand before starting:
+
+```powershell
+$env:JOIN_URL="http://192.168.1.50:3000/controller.html"; npm start
+```
 
 ## Open Player Controllers
 

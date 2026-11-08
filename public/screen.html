@@ -46,25 +46,76 @@
       font-size: 14px;
     }
 
-    /* Canvas sits in the right column */
+    /* Map sits in the middle column and shrinks to fit the window */
+    #mapCol {
+      flex: 1;
+      min-width: 0;
+    }
+
     canvas {
       display: block;
+      width: 100%;
+      height: auto;
+      max-height: calc(100vh - 20px);
+      object-fit: contain;
       background: #222;
       border-radius: 6px;
+    }
+
+    /* Join panel: QR code players scan to open the controller */
+    #join {
+      width: 240px;
+      flex-shrink: 0;
+      color: #fff;
+      text-align: center;
+    }
+
+    #join h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
+    #joinQr {
+      display: block;
+      width: 100%;
+      background: #fff;
+      border-radius: 6px;
+    }
+
+    #joinUrl {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #ccc;
+      word-break: break-all;
     }
   </style>
 
 </head>
 <body>
-  <div id="hud">
-    <div id="counts"></div>
-    <button id="startBtn" class="hudBtn">Start Race</button>
-    <button id="nextMapBtn" class="hudBtn">Next Map</button>
+  <div id="layout">
+    <div id="hud">
+      <div id="counts"></div>
+      <button id="startBtn" class="hudBtn">Start Race</button>
+      <button id="nextMapBtn" class="hudBtn">Next Map</button>
+    </div>
+
+    <div id="mapCol">
+      <canvas id="game" width="1000" height="600"></canvas>
+    </div>
+
+    <div id="join">
+      <h2>Scan to join</h2>
+      <img id="joinQr" src="/join-qr" alt="QR code to join the game">
+      <div id="joinUrl"></div>
+    </div>
   </div>
 
-  <canvas id="game" width="1000" height="600"></canvas>
-
   <script>
+    fetch('/join-info')
+      .then(r => r.json())
+      .then(info => { document.getElementById('joinUrl').textContent = info.url; })
+      .catch(() => {});
+
     const socket = io();
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');

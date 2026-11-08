@@ -7,6 +7,8 @@ const server = http.createServer(app);
 const io = new Server(server);
 const fs = require('fs');
 const path = require('path')
+const os = require('os');
+const QRCode = require('qrcode');
 
 // ----- CONFIG -----
 const TEAM_IDS = ['red', 'blue'];
@@ -29,7 +31,54 @@ let mapIndex = 0;
 let MAP = loadMapFromFile(path.join(MAP_DIR, MAP_FILES[mapIndex]));
 validateMap(MAP);
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ----- JOIN QR CODE -----
+// Players scan a QR code on the game screen that points at this computer's
+// controller page. Set JOIN_URL to override the auto-detected address.
+const PORT = process.env.PORT || 3000;
+
+// Adapters that are never the Wi-Fi/Ethernet network phones are on.
+const VIRTUAL_ADAPTER = /vethernet|virtual|vmware|vbox|hyper-v|wsl|docker|loopback|tailscale|zerotier|vpn/i;
+
+function isPrivateIPv4(ip) {
+  return /^10\./.test(ip) ||
+    /^192\.168\./.test(ip) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
+}
+
+function detectLanAddress() {
+  const candidates = [];
+  for (const [name, addrs] of Object.entries(os.networkInterfaces())) {
+    for (const a of addrs || []) {
+      if (a.family !== 'IPv4' && a.family !== 4) continue;
+      if (a.internal || a.address.startsWith('169.254.')) continue;
+      let score = 0;
+      if (!VIRTUAL_ADAPTER.test(name)) score += 4;
+      if (/wi-?fi|wlan|wireless/i.test(name)) score += 2;
+      if (isPrivateIPv4(a.address)) score += 1;
+      candidates.push({ address: a.address, score });
+    }
+  }
+  candidates.sort((x, y) => y.score - x.score);
+  return candidates.length ? candidates[0].address : 'localhost';
+}
+
+const JOIN_URL = process.env.JOIN_URL ||
+  `http://${detectLanAddress()}:${PORT}/controller.html`;
+
+app.get('/join-info', (req, res) => {
+  res.json({ url: JOIN_URL });
+});
+
+app.get('/join-qr', async (req, res) => {
+  try {
+    const svg = await QRCode.toString(JOIN_URL, { type: 'svg', margin: 2 });
+    res.type('image/svg+xml').send(svg);
+  } catch (err) {
+    res.status(500).send('Could not create QR code');
+  }
+});
 
 
 
@@ -510,7 +559,8 @@ setInterval(() => {
   }
 }, TICK_MS);
 
-const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log('Server listening on', PORT);
+  console.log(`Game screen:  http://localhost:${PORT}/screen.html`);
+  console.log(`Players join: ${JOIN_URL}`);
 });
