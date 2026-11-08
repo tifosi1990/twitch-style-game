@@ -90,6 +90,7 @@ Look for the IPv4 address under your active Wi-Fi or Ethernet adapter.
 - Walls block movement.
 - Boulders can be pushed if the space behind them is free.
 - Ledges can only be crossed by moving downward.
+- Ice makes a cube slide in the direction it moved until it hits an obstacle (wall, ledge, boulder or the other cube) or slides off the ice.
 - After a winner is found, the race resets after a short delay.
 
 ## Maps
@@ -111,6 +112,7 @@ B = blue team start
 G = goal
 O = boulder
 V = ledge
+I = ice
 space = empty floor
 ```
 
