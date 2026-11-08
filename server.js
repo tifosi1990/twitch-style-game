@@ -409,14 +409,20 @@ function resetTeamsToStart() {
 
 // ----- SOCKET.IO -----
 io.on('connection', socket => {
-  console.log('player connected', socket.id);
+  // The game screen connects as a spectator: it gets the game state but is
+  // not a player, so it is not counted or put on a team.
+  const isScreen = socket.handshake.query.role === 'screen';
+  console.log(isScreen ? 'screen connected' : 'player connected', socket.id);
 
-  const teamId = assignTeam();
-  players[socket.id] = {
-    teamId,
-    lastCommandTime: 0
-  };
-  socket.join(teamId);
+  let teamId = null;
+  if (!isScreen) {
+    teamId = assignTeam();
+    players[socket.id] = {
+      teamId,
+      lastCommandTime: 0
+    };
+    socket.join(teamId);
+  }
 
   // Initial state for this client
   socket.emit('init', {
@@ -493,7 +499,7 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     delete players[socket.id];
-    console.log('player disconnected', socket.id);
+    console.log(isScreen ? 'screen disconnected' : 'player disconnected', socket.id);
   });
 });
 
